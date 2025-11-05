@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIFDHA99 - Hacker Terminal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+        
+        body {
+            background-color: #000;
+            color: #0f0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        
+        .matrix-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+        
+        .title {
+            font-size: 5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5rem;
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0, 0 0 30px #0f0;
+            animation: flicker 2s infinite alternate;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+            text-align: center;
+            color: #0a0;
+            animation: pulse 3s infinite;
+        }
+        
+        .terminal {
+            width: 80%;
+            max-width: 800px;
+            height: 300px;
+            background-color: rgba(0, 20, 0, 0.7);
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            padding: 15px;
+            overflow-y: auto;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+        
+        .terminal-line {
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+        
+        .prompt {
+            color: #0f0;
+        }
+        
+        .command {
+            color: #fff;
+        }
+        
+        .output {
+            color: #0a0;
+        }
+        
+        .cursor {
+            display: inline-block;
+            background-color: #0f0;
+            width: 8px;
+            height: 1.2rem;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+        
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+                opacity: 1;
+            }
+            20%, 24%, 55% {
+                opacity: 0.7;
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+        
+        @keyframes blink {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .title {
+                font-size: 3rem;
+                letter-spacing: 0.3rem;
+            }
+            
+            .terminal {
+                width: 95%;
+                height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas class="matrix-bg" id="matrix"></canvas>
+    
+    <h1 class="title">MIFDHA99</h1>
+    <p class="subtitle">SYSTEM TERMINAL - ACCESS GRANTED</p>
+    
+    <div class="terminal" id="terminal">
+        <div class="terminal-line">
+            <span class="prompt">user@mifdha99:~$</span> <span class="command">whoami</span>
+        </div>
+        <div class="terminal-line output">mifdha99</div>
+        
+        <div class="terminal-line">
+            <span class="prompt">user@mifdha99:~$</span> <span class="command">system_status</span>
+        </div>
+        <div class="terminal-line output">System: ONLINE</div>
+        <div class="terminal-line output">Security: ENHANCED</div>
+        <div class="terminal-line output">Access: AUTHORIZED</div>
+        
+        <div class="terminal-line">
+            <span class="prompt">user@mifdha99:~$</span> <span class="command">scan_network</span>
+        </div>
+        <div class="terminal-line output">Scanning network... 47.3% complete</div>
+        <div class="terminal-line output">Firewall detected: BYPASSED</div>
+        
+        <div class="terminal-line">
+            <span class="prompt">user@mifdha99:~$</span> <span class="command">access_mainframe</span>
+        </div>
+        <div class="terminal-line output">Mainframe access granted</div>
+        <div class="terminal-line output">Encryption level: 256-bit</div>
+        
+        <div class="terminal-line">
+            <span class="prompt">user@mifdha99:~$</span> <span class="command"></span><span class="cursor"></span>
+        </div>
+    </div>
+
+    <script>
+        // Matrix rain effect
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@%&*()[]{}";
+        const charArray = chars.split("");
+        const fontSize = 14;
+        const columns = canvas.width / fontSize;
+        
+        const drops = [];
+        for (let i = 0; i < columns; i++) {
+            drops[i] = 1;
+        }
+        
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.04)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = "#0f0";
+            ctx.font = fontSize + "px monospace";
+            
+            for (let i = 0; i < drops.length; i++) {
+                const text = charArray[Math.floor(Math.random() * charArray.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                
+                drops[i]++;
+            }
+        }
+        
+        setInterval(drawMatrix, 35);
+        
+        // Terminal typing effect
+        const terminal = document.getElementById('terminal');
+        const cursorLine = terminal.querySelector('.terminal-line:last-child');
+        const commandSpan = cursorLine.querySelector('.command');
+        
+        const commands = [
+            "decrypt_files",
+            "initiate_sequence",
+            "upload_payload",
+            "execute_protocol",
+            "clear_logs",
+            "exit"
+        ];
+        
+        let commandIndex = 0;
+        let charIndex = 0;
+        let isDeleting = false;
+        
+        function typeCommand() {
+            const currentCommand = commands[commandIndex];
+            
+            if (isDeleting) {
+                commandSpan.textContent = currentCommand.substring(0, charIndex - 1);
+                charIndex--;
+            } else {
+                commandSpan.textContent = currentCommand.substring(0, charIndex + 1);
+                charIndex++;
+            }
+            
+            if (!isDeleting && charIndex === currentCommand.length) {
+                setTimeout(() => {
+                    isDeleting = true;
+                }, 2000);
+            } else if (isDeleting && charIndex === 0) {
+                isDeleting = false;
+                commandIndex = (commandIndex + 1) % commands.length;
+            }
+            
+            setTimeout(typeCommand, isDeleting ? 50 : 100);
+        }
+        
+        setTimeout(typeCommand, 1000);
+        
+        // Auto scroll terminal
+        function scrollTerminal() {
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+        
+        setInterval(scrollTerminal, 100);
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
