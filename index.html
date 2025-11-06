@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>MIFDHA99 - Hacker Terminal</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
+        html, body { height: 100%; }
+        body {
+            background-color: #000;
+            color: #0f0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 20px;
+        }
+
+        /* Matrix canvas sits behind content */
+        .matrix-bg {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.25;
+            pointer-events: none;
+        }
+
+        .container {
+            z-index: 2;
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .title {
+            font-size: 3.2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.6rem;
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0, 0 0 30px #0f0;
+            animation: flicker 2s infinite alternate;
+            text-align: center;
+            margin-top: 6px;
+            position: relative;
+            display: inline-block;
+        }
+
+        /* glitch effect on title */
+        .title.glitch {
+            position: relative;
+        }
+        .title.glitch::before,
+        .title.glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            overflow: hidden;
+            clip: rect(0, 9999px, 0, 0);
+        }
+        .title.glitch::before {
+            left: 2px;
+            text-shadow: -2px 0 #ff00c1;
+            animation: glitchTop 2.5s infinite linear;
+        }
+        .title.glitch::after {
+            left: -2px;
+            text-shadow: -2px 0 #00eaff;
+            animation: glitchBottom 3s infinite linear;
+        }
+
+        @keyframes glitchTop {
+            0% { clip: rect(0,9999px,0,0); transform: translate(0,0); }
+            10% { clip: rect(5px,9999px,40px,0); transform: translate(-2px,-1px); }
+            20% { clip: rect(10px,9999px,20px,0); transform: translate(2px,1px); }
+            30% { clip: rect(0,9999px,50px,0); transform: translate(-1px,0); }
+            40% { clip: rect(20px,9999px,45px,0); transform: translate(1px,-1px); }
+            100% { clip: rect(0,9999px,0,0); transform: translate(0,0); }
+        }
+        @keyframes glitchBottom {
+            0% { clip: rect(0,9999px,0,0); transform: translate(0,0); }
+            10% { clip: rect(50px,9999px,80px,0); transform: translate(1px,1px); }
+            20% { clip: rect(30px,9999px,60px,0); transform: translate(-1px,-1px); }
+            30% { clip: rect(15px,9999px,90px,0); transform: translate(2px,0); }
+            40% { clip: rect(40px,9999px,70px,0); transform: translate(-2px,1px); }
+            100% { clip: rect(0,9999px,0,0); transform: translate(0,0); }
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            color: #0a0;
+            animation: pulse 3s infinite;
+            text-align: center;
+        }
+
+        .controls {
+            width: 80%;
+            max-width: 800px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .controls input[type="text"] {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 10px 12px;
+            border-radius: 6px;
+            outline: none;
+            min-width: 240px;
+        }
+
+        .controls button {
+            background: transparent;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            font-weight: bold;
+        }
+        .controls button:hover {
+            background: #0f0;
+            color: #000;
+        }
+
+        .status-bar {
+            width: 80%;
+            max-width: 800px;
+            background: rgba(0,20,0,0.6);
+            border: 1px solid #0f0;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 0 12px rgba(0,255,0,0.12);
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            color: #0a0;
+            font-size: 0.95rem;
+        }
+
+        .progress-wrap {
+            flex: 1;
+            margin-left: 12px;
+            margin-right: 12px;
+        }
+        .progress {
+            width: 100%;
+            height: 10px;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(15,255,15,0.15);
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress > .bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, rgba(0,255,0,0.12), rgba(0,255,0,0.35));
+            box-shadow: 0 0 12px rgba(0,255,0,0.08) inset;
+            transition: width 0.12s linear;
+        }
+
+        /* scanning beam overlay */
+        .scan-beam {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 3px;
+            background: linear-gradient(90deg, rgba(0,255,0,0), rgba(0,255,0,0.6), rgba(0,255,0,0));
+            top: 50%;
+            pointer-events: none;
+            mix-blend-mode: screen;
+            opacity: 0;
+            filter: blur(1px);
+            z-index: 1;
+            border-radius: 999px;
+        }
+        .scan-beam.active {
+            animation: scanMove 2s linear infinite;
+            opacity: 1;
+        }
+        @keyframes scanMove {
+            0% { transform: translateX(-60%) translateY(-50%); }
+            50% { transform: translateX(60%) translateY(-50%); }
+            100% { transform: translateX(-60%) translateY(-50%); }
+        }
+
+        /* Terminal */
+        .terminal {
+            width: 80%;
+            max-width: 800px;
+            height: 320px;
+            background-color: rgba(0, 10, 0, 0.75);
+            border: 1px solid #0f0;
+            border-radius: 6px;
+            padding: 15px;
+            overflow-y: auto;
+            box-shadow: 0 0 18px rgba(0, 255, 0, 0.15);
+            color: #0a0;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            position: relative;
+            z-index: 2;
+        }
+
+        .terminal-line { margin-bottom: 6px; }
+        .prompt { color: #0f0; }
+        .command { color: #fff; }
+        .output { color: #0a0; }
+
+        .cursor {
+            display: inline-block;
+            background-color: #0f0;
+            width: 8px;
+            height: 1.1rem;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+            margin-left: 6px;
+        }
+
+        /* small glitch flicker on some lines */
+        .glitch-line {
+            position: relative;
+        }
+        .glitch-line.glitchy::after {
+            content: attr(data-text);
+            position: absolute;
+            left: 2px;
+            top: 0;
+            color: rgba(255,0,200,0.6);
+            clip-path: inset(0 0 70% 0);
+            transform: translateX(-1px);
+            animation: lineGlitch 1.6s infinite linear;
+            pointer-events: none;
+        }
+        @keyframes lineGlitch {
+            0% { transform: translateX(0); opacity: 1; }
+            10% { transform: translateX(-2px); opacity: 0.9; }
+            20% { transform: translateX(2px); opacity: 0.4; }
+            30% { transform: translateX(-6px); opacity: 0.7; }
+            40% { transform: translateX(0); opacity: 1; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes flicker { 0%,19%,21%,23%,25%,54%,56%,100% {opacity:1;} 20%,24%,55%{opacity:0.7;} }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.7;} }
+        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .title { font-size: 2rem; letter-spacing: 0.28rem; }
+            .terminal { height: 240px; width: 96%; }
+            .controls { width: 96%; flex-direction: column; gap: 10px; }
+            .status-bar { width: 96%; flex-direction: column; gap: 8px; align-items: stretch; }
+            .progress-wrap { margin: 0; }
+        }
+
+    </style>
+</head>
+<body>
+    <canvas class="matrix-bg" id="matrix"></canvas>
+
+    <div class="container">
+        <h1 class="title glitch" id="title" data-text="MIFDHA99">MIFDHA99</h1>
+        <p class="subtitle">SYSTEM TERMINAL - ACCESS GRANTED</p>
+
+        <div class="controls">
+            <input id="targetName" type="text" placeholder="Enter target name (e.g. target@example.com)" />
+            <button id="startBtn">Start Scan</button>
+            <button id="resetBtn" title="Reset terminal & progress">Reset</button>
+        </div>
+
+        <div class="status-bar" id="statusBar" aria-live="polite">
+            <div id="locText">Location: <em>unknown</em></div>
+            <div class="progress-wrap" aria-hidden="false">
+                <div style="font-size:0.85rem">Scan progress: <span id="progressPct">0%</span></div>
+                <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div class="bar" id="progressBar"></div>
+                </div>
+            </div>
+            <div id="scanStatus">Status: idle</div>
+        </div>
+
+        <div class="scan-beam" id="scanBeam"></div>
+
+        <div class="terminal" id="terminal" aria-live="polite">
+            <div class="terminal-line">
+                <span class="prompt">user@mifdha99:~$</span> <span class="command">whoami</span>
+            </div>
+            <div class="terminal-line output">mifdha99</div>
+
+            <div class="terminal-line">
+                <span class="prompt">user@mifdha99:~$</span> <span class="command">system_status</span>
+            </div>
+            <div class="terminal-line output">System: ONLINE</div>
+            <div class="terminal-line output">Security: ENHANCED</div>
+            <div class="terminal-line output">Access: AUTHORIZED</div>
+
+            <div id="dynamicArea">
+                <div class="terminal-line">
+                    <span class="prompt">user@mifdha99:~$</span> <span class="command">scan_network</span>
+                </div>
+                <div class="terminal-line output">Scanning network... 0% complete</div>
+            </div>
+
+            <div class="terminal-line" id="inputLine">
+                <span class="prompt">user@mifdha99:~$</span> <span class="command"></span><span class="cursor"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ---------------- Matrix rain ---------------- */
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@%&*()[]{}<>/\\|";
+        const charArray = chars.split("");
+        const fontSize = 14;
+        let columns = Math.floor(window.innerWidth / fontSize);
+        let drops = new Array(columns).fill(1);
+
+        function resetMatrixCols() {
+            columns = Math.floor(window.innerWidth / fontSize);
+            drops = new Array(columns).fill(1);
+        }
+        window.addEventListener('resize', resetMatrixCols);
+
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.06)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#0f0";
+            ctx.font = fontSize + "px monospace";
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = charArray[Math.floor(Math.random() * charArray.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.97) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        const matrixInterval = setInterval(drawMatrix, 35);
+
+        /* -------------- UI Elements --------------- */
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const targetNameInput = document.getElementById('targetName');
+        const terminal = document.getElementById('terminal');
+        const dynamicArea = document.getElementById('dynamicArea');
+        const progressBar = document.getElementById('progressBar');
+        const progressPct = document.getElementById('progressPct');
+        const scanStatus = document.getElementById('scanStatus');
+        const locText = document.getElementById('locText');
+        const scanBeam = document.getElementById('scanBeam');
+        const title = document.getElementById('title');
+
+        /* ------------- Location detection ------------- */
+        async function detectLocation() {
+            locText.innerHTML = 'Location: <em>detecting…</em>';
+            // Try browser geolocation first (asks permission)
+            if (navigator.geolocation) {
+                const geoPromise = new Promise((resolve) => {
+                    const timer = setTimeout(() => resolve(null), 8000); // don't hang forever
+                    navigator.geolocation.getCurrentPosition(
+                        pos => {
+                            clearTimeout(timer);
+                            resolve({lat: pos.coords.latitude, lon: pos.coords.longitude, method: 'geo'});
+                        },
+                        err => {
+                            clearTimeout(timer);
+                            resolve(null);
+                        },
+                        { timeout: 7000 }
+                    );
+                });
+
+                const geo = await geoPromise;
+                if (geo) {
+                    locText.innerHTML = `Location: <em>GPS</em> ${geo.lat.toFixed(4)}, ${geo.lon.toFixed(4)}`;
+                    return geo;
+                }
+            }
+
+            // Fallback: IP-based geolocation (public API). If blocked, show unknown.
+            try {
+                const resp = await fetch('https://ipapi.co/json/');
+                if (resp.ok) {
+                    const j = await resp.json();
+                    const display = `${j.city || 'unknown city'}, ${j.region || ''} ${j.country_name || ''}`.trim();
+                    locText.innerHTML = `Location: <em>IP</em> ${display} (${j.ip || ''})`;
+                    return { ipInfo: j, method: 'ip' };
+                } else {
+                    locText.innerHTML = 'Location: <em>unavailable</em>';
+                    return null;
+                }
+            } catch (e) {
+                locText.innerHTML = 'Location: <em>unavailable</em>';
+                return null;
+            }
+        }
+
+        /* -------------- Terminal helpers -------------- */
+        function appendLine(html, options = {}) {
+            const div = document.createElement('div');
+            div.className = 'terminal-line';
+            if (options.output) div.classList.add('output');
+            if (options.command) div.innerHTML = `<span class="prompt">user@mifdha99:~$</span> <span class="command">${html}</span>`;
+            else div.innerHTML = html;
+            if (options.glitch) {
+                div.classList.add('glitch-line', 'glitchy');
+                div.setAttribute('data-text', div.textContent || html);
+            }
+            dynamicArea.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight;
+            return div;
+        }
+
+        function clearDynamicArea() {
+            dynamicArea.innerHTML = '';
+        }
+
+        /* ---------- Scanning animation & logic ---------- */
+        let scanTimer = null;
+        let scanValue = 0;
+        let scanning = false;
+
+        function setProgress(val) {
+            scanValue = Math.max(0, Math.min(100, Math.round(val)));
+            progressBar.style.width = scanValue + '%';
+            progressPct.textContent = scanValue + '%';
+            progressBar.parentElement.setAttribute('aria-valuenow', scanValue);
+        }
+
+        function startVisualScan(target) {
+            if (scanning) return;
+            scanning = true;
+            scanBeam.classList.add('active');
+            title.classList.add('glitch'); // add title glitch while scanning
+            scanStatus.textContent = 'Status: scanning';
+            appendLine(`<span class="prompt">user@mifdha99:~$</span> <span class="command">initiate_scan ${escapeHtml(target)}</span>`, { command: true, glitch: true });
+
+            // simulated scan progression with some random jitter + events
+            let steps = [
+                { t: 0, text: 'Resolving target...' },
+                { t: 6, text: 'Pinging host...' },
+                { t: 14, text: 'Enumerating ports...' },
+                { t: 30, text: 'Fingerprinting services...' },
+                { t: 50, text: 'Bypassing minor defenses...' },
+                { t: 70, text: 'Extracting metadata...' },
+                { t: 88, text: 'Performing deep analysis...' },
+                { t: 96, text: 'Finalizing results...' },
+            ];
+            let stepIdx = 0;
+
+            // create a "live" output line that we update
+            const liveLine = appendLine('Scanning ' + escapeHtml(target) + '... 0% complete', { output: true, glitch: false });
+
+            scanTimer = setInterval(() => {
+                // increment progress, but with jitter
+                const increment = 1 + Math.floor(Math.random() * 3);
+                setProgress(scanValue + increment);
+
+                // occasionally append a small output
+                if (Math.random() > 0.85) {
+                    const msgCandidates = [
+                        'Firewall: DETECTED',
+                        'Firewall: BYPASSED',
+                        'Service: SSH open',
+                        'Service: HTTP open',
+                        'Service: SMTP filtered',
+                        'Credential leak: POSSIBLE',
+                        'Encryption: 256-bit',
+                        'Proxy: Transparent',
+                        'Latency spike detected',
+                        'Log scrub: partial'
+                    ];
+                    const msg = msgCandidates[Math.floor(Math.random() * msgCandidates.length)];
+                    appendLine(msg, { output: true, glitch: Math.random() > 0.6 });
+                }
+
+                // Update staged messages
+                if (stepIdx < steps.length && scanValue >= steps[stepIdx].t) {
+                    appendLine(steps[stepIdx].text, { output: true, glitch: true });
+                    stepIdx++;
+                }
+
+                liveLine.textContent = `Scanning ${target}... ${scanValue}% complete`;
+
+                // small chance to glitch title briefly
+                if (Math.random() > 0.96) {
+                    title.classList.toggle('glitch');
+                    setTimeout(() => title.classList.toggle('glitch'), 300 + Math.random() * 600);
+                }
+
+                if (scanValue >= 100) {
+                    finishScan(target);
+                }
+            }, 220);
+        }
+
+        async function finishScan(target) {
+            clearInterval(scanTimer);
+            scanTimer = null;
+            setProgress(100);
+            scanBeam.classList.remove('active');
+            scanStatus.textContent = 'Status: analysis complete';
+            appendLine('Scan complete. Preparing report...', { output: true });
+            // small fake "report"
+            await sleep(400);
+            appendLine(`Target: ${escapeHtml(target)} - ACCESSIBILITY: HIGH`, { output: true, glitch: true });
+            appendLine('Open ports: 22, 80, 443', { output: true });
+            appendLine('Potential creds: none found', { output: true });
+            appendLine('Notes: Follow-up recommended', { output: true });
+            title.classList.remove('glitch');
+            scanning = false;
+        }
+
+        function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+        /* --------------- Event handlers --------------- */
+        startBtn.addEventListener('click', async () => {
+            if (scanning) return;
+            const target = (targetNameInput.value || 'unknown-target').trim();
+            targetNameInput.blur();
+            // show geolocation info (best-effort)
+            await detectLocation();
+
+            // add some initial lines
+            appendLine(`<span class="prompt">user@mifdha99:~$</span> <span class="command">scan_target ${escapeHtml(target)}</span>`, { command: true, glitch: true });
+            appendLine('Initializing advanced scan modules...', { output: true });
+
+            setProgress(2);
+            // start the visual scanning
+            startVisualScan(target);
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+            scanning = false;
+            setProgress(0);
+            scanStatus.textContent = 'Status: idle';
+            scanBeam.classList.remove('active');
+            title.classList.remove('glitch');
+            // clear dynamic area and re-add the initial scan_network snippet
+            clearDynamicArea();
+            const node = document.createElement('div');
+            node.innerHTML = `
+                <div class="terminal-line">
+                    <span class="prompt">user@mifdha99:~$</span> <span class="command">scan_network</span>
+                </div>
+                <div class="terminal-line output">Scanning network... 0% complete</div>
+            `;
+            dynamicArea.appendChild(node);
+            terminal.scrollTop = terminal.scrollHeight;
+        });
+
+        // utility to escape inserted HTML in terminal
+        function escapeHtml(unsafe) {
+            return String(unsafe)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        /* --------------- Small typing demo for prompt area --------------- */
+        (function promptTyper() {
+            const inputLine = document.getElementById('inputLine').querySelector('.command');
+            const sample = ['recon', 'probe_ports', 'dump_logs', 'analyze', 'exit'];
+            let i = 0, c = 0, del = false;
+            function tick() {
+                const cur = sample[i];
+                if (!del) {
+                    inputLine.textContent = cur.slice(0, c+1);
+                    c++;
+                    if (c >= cur.length) { del = true; setTimeout(tick, 1200); return; }
+                } else {
+                    inputLine.textContent = cur.slice(0, c-1);
+                    c--;
+                    if (c <= 0) { del = false; i = (i+1) % sample.length; }
+                }
+                setTimeout(tick, del ? 45 : 110);
+            }
+            setTimeout(tick, 1200);
+        })();
+
+        /* ----------------- Auto-scroll helper ----------------- */
+        setInterval(() => { terminal.scrollTop = terminal.scrollHeight; }, 100);
+
+        /* ----------------- Small startup actions ----------------- */
+        // initial location check (best-effort but don't force)
+        detectLocation().catch(()=>{});
+        
+        /* --------------- Accessibility: keyboard start --------------- */
+        targetNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') startBtn.click();
+        });
+
+        /* optional: small random glitches to terminal lines over time */
+        setInterval(() => {
+            // randomly add small fake noise lines
+            if (Math.random() > 0.975 && !scanning) {
+                appendLine('Kernel noise: 0x' + Math.floor(Math.random() * 0xFFFF).toString(16), { output: true });
+            }
+        }, 900);
+
+    </script>
+</body>
+</html>
